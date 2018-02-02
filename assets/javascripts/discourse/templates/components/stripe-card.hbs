@@ -7,6 +7,12 @@
     </label>
     <div class="controls controls-dropdown">
       {{combo-box valueAttribute="value" content=donateAmounts value=amount}}
+      {{#if showCustomAmount}}
+        {{input type='number'
+                value=customAmountInput
+                class='custom-amount-input'
+                placeholder=(i18n 'discourse_donations.custom_amount_placeholder')}}
+      {{/if}}
     </div>
   </div>
 

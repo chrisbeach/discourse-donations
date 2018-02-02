@@ -25,6 +25,8 @@ en:
       title: Donate
       nav_item: Donate
       amount: Amount
+      custom_amount: "Custom Amount"
+      custom_amount_placeholder: "Enter a number"
       card: Credit or debit card
       submit: Make Payment
       submit_with_create_account: Make Payment and Create Account

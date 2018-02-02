@@ -9,6 +9,7 @@ export default Ember.Component.extend({
   transactionInProgress: null,
   settings: null,
   showTransactionFeeDescription: false,
+  showCustomAmount: Ember.computed.equal('amount', 'custom'),
 
   init() {
     this._super();
@@ -22,12 +23,21 @@ export default Ember.Component.extend({
   donateAmounts() {
     const setting = Discourse.SiteSettings.discourse_donations_amounts.split('|');
     if (setting.length) {
-      return setting.map((amount) => {
+      let amounts = setting.map((amount) => {
         return {
           value: parseInt(amount, 10),
           name: `${amount}.00`
         };
       });
+
+      if (Discourse.SiteSettings.discourse_donations_custom_amount) {
+        amounts.push({
+          value: 'custom',
+          name: I18n.t('discourse_donations.custom_amount')
+        });
+      }
+
+      return amounts;
     } else {
       return [];
     }
@@ -41,18 +51,26 @@ export default Ember.Component.extend({
     });
   },
 
-  @computed('amount')
-  transactionFee(amount) {
+  @computed('amount', 'showCustomAmount', 'customAmount')
+  transactionFee(amount, showCustom, custom) {
     const fixed = Discourse.SiteSettings.discourse_donations_transaction_fee_fixed;
     const percent = Discourse.SiteSettings.discourse_donations_transaction_fee_percent;
-    const fee = ((amount + fixed)  /  (1 - percent)) - amount;
+    const amt = showCustom ? custom : amount;
+    const fee = ((amt + fixed)  /  (1 - percent)) - amt;
     return Math.round(fee * 100) / 100;
   },
 
-  @computed('amount', 'transactionFee', 'includeTransactionFee')
-  totalAmount(amount, fee, include) {
-    if (include) return amount + fee;
-    return amount;
+  @computed('customAmountInput')
+  customAmount(input) {
+    if (!input) return 0;
+    return parseInt(input, 10);
+  },
+
+  @computed('amount', 'transactionFee', 'includeTransactionFee', 'showCustomAmount', 'customAmount')
+  totalAmount(amount, fee, include, showCustom, custom) {
+    let amt = showCustom ? custom : amount;
+    if (include) return amt + fee;
+    return amt;
   },
 
   didInsertElement() {
@@ -87,8 +105,14 @@ export default Ember.Component.extend({
           self.set('result', data.error.message);
           self.endTranscation();
         } else {
-          const transactionFeeEnabled = Discourse.SiteSettings.discourse_donations_enable_transaction_fee;
-          const amount = transactionFeeEnabled ? this.get('totalAmount') : this.get('amount');
+          let amount;
+          if (Discourse.SiteSettings.discourse_donations_enable_transaction_fee) {
+            amount = this.get('totalAmount');
+          } else {
+            const showCustomAmount = this.get('showCustomAmount');
+            amount = showCustomAmount ? this.get('customAmount') : this.get('amount');
+          }
+
           let params = {
             stripeToken: data.token.id,
             amount: amount * 100,
