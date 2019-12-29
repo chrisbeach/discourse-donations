@@ -18,7 +18,7 @@ addons:
     - jhead
 
 rvm:
-  - 2.4.0
+  - 2.6
 
 services:
   - redis-server
@@ -32,6 +32,7 @@ install:
   - git clone $TRAVIS_BUILD_DIR plugins/discourse-donations --depth 50 --branch $TRAVIS_BRANCH
 
 before_script:
+  - gem update --system
   - gem install bundler
   - bundle install
   - bundle exec rake db:create db:migrate
