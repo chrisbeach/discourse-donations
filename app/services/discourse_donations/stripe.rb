@@ -36,12 +36,21 @@ module DiscourseDonations
 
       return if !customer
 
+      metadata = {
+        discourse_cause: opts[:cause]
+      }
+
+      if (user)
+        metadata[:discourse_user_id] = user.id
+      end
+
       @charge = ::Stripe::Charge.create(
         customer: customer.id,
         amount: opts[:amount],
         description: @description,
         currency: @currency,
-        receipt_email: customer.email
+        receipt_email: customer.email,
+        metadata: metadata
       )
 
       @charge
@@ -72,7 +81,11 @@ module DiscourseDonations
         customer: customer.id,
         items: [{
           plan: plan_id
-        }]
+        }],
+        metadata: {
+          discourse_cause: opts[:cause],
+          discourse_user_id: user.id
+        }
       )
     end
 
@@ -186,10 +199,18 @@ module DiscourseDonations
       end
 
       if !customer && opts[:create]
-        customer = ::Stripe::Customer.create(
+        customer_opts = {
           email: opts[:email],
           source: opts[:source]
-        )
+        }
+
+        if user
+          customer_opts[:metadata] = {
+            discourse_user_id: user.id
+          }
+        end
+
+        customer = ::Stripe::Customer.create(customer_opts)
 
         if user
           user.custom_fields['stripe_customer_id'] = customer.id

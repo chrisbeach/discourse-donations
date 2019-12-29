@@ -48,6 +48,7 @@ module DiscourseDonations
       begin
         Rails.logger.debug "Creating a Stripe charge for #{user_params[:amount]}"
         opts = {
+          cause: user_params[:cause],
           email: @email,
           token: user_params[:stripeToken],
           amount: user_params[:amount]
@@ -104,6 +105,10 @@ module DiscourseDonations
           args = user_params.to_h.slice(:email, :username, :password, :name).merge(rewards: output['rewards'])
           Jobs.enqueue(:donation_user, args)
         end
+
+        if SiteSetting.discourse_donations_cause_category
+          Jobs.enqueue(:update_category_donation_statistics)
+        end
       end
 
       render json: output
@@ -153,7 +158,7 @@ module DiscourseDonations
     end
 
     def user_params
-      params.permit(:user_id, :name, :username, :email, :password, :stripeToken, :type, :amount, :create_account)
+      params.permit(:user_id, :name, :username, :email, :password, :stripeToken, :cause, :type, :amount, :create_account)
     end
 
     def set_user
